@@ -1,11 +1,12 @@
 # Package information
 
-This is a clone of [gorilla/websocket](https://github.com/gorilla/websocket).  Its the low-level websocket api for [Iris Web Framework](https://github.com/kataras/iris). This is just the base of the [High level iris-ws](https://github.com/kataras/iris/tree/master/websocket), I recommend you use that instead.
+The iris-conrib/websocket package has been converted from the [gorilla/websocket](https://github.com/gorilla/websocket)
+
+
+If you need more, use the high [high level iris-ws](https://github.com/kataras/iris/tree/master/websocket), I recommend you use that instead.
 
 
 # Websockets
-
-You can find working examples [here](https://github.com/iris-contrib/examples), folders starts with websocket_ are these you are looking for.
 
 **WebSocket is a protocol providing full-duplex communication channels over a single TCP connection**. The WebSocket protocol was standardized by the IETF as RFC 6455 in 2011, and the WebSocket API in Web IDL is being standardized by the W3C.
 
@@ -19,7 +20,7 @@ How to use
 
 ```go
 import (
-	"github.com/kataras/iris/websocket"
+	"github.com/iris-contrib/websocket"
 	"github.com/kataras/iris"
 )
 
@@ -43,5 +44,3 @@ func main() {
 }
 
 ```
-
-The iris/websocket package has been converted from the gorilla/websocket. If you want to see more examples just go [here](https://github.com/gorilla/websocket/tree/master/examples) and make the conversions as you see in 'How to use' before.
