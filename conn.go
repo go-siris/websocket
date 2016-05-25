@@ -1,7 +1,3 @@
-// Copyright 2013 The Gorilla WebSocket Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package websocket
 
 import (
@@ -14,7 +10,8 @@ import (
 	"net"
 	"strconv"
 	"time"
-	"unicode/utf8"
+
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -44,8 +41,6 @@ const (
 	CloseMessageTooBig           = 1009
 	CloseMandatoryExtension      = 1010
 	CloseInternalServerErr       = 1011
-	CloseServiceRestart          = 1012
-	CloseTryAgainLater           = 1013
 	CloseTLSHandshake            = 1015
 )
 
@@ -187,29 +182,6 @@ func isData(frameType int) bool {
 	return frameType == TextMessage || frameType == BinaryMessage
 }
 
-var validReceivedCloseCodes = map[int]bool{
-	// see http://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number
-
-	CloseNormalClosure:           true,
-	CloseGoingAway:               true,
-	CloseProtocolError:           true,
-	CloseUnsupportedData:         true,
-	CloseNoStatusReceived:        false,
-	CloseAbnormalClosure:         false,
-	CloseInvalidFramePayloadData: true,
-	ClosePolicyViolation:         true,
-	CloseMessageTooBig:           true,
-	CloseMandatoryExtension:      true,
-	CloseInternalServerErr:       true,
-	CloseServiceRestart:          true,
-	CloseTryAgainLater:           true,
-	CloseTLSHandshake:            false,
-}
-
-func isValidReceivedCloseCode(code int) bool {
-	return validReceivedCloseCodes[code] || (code >= 3000 && code <= 4999)
-}
-
 func maskBytes(key [4]byte, pos int, b []byte) int {
 	for i := range b {
 		b[i] ^= key[pos&3]
@@ -255,6 +227,9 @@ type Conn struct {
 	handlePong    func(string) error
 	handlePing    func(string) error
 	readErrCount  int
+
+	//request headers
+	headers *fasthttp.RequestHeader
 }
 
 func newConn(conn net.Conn, isServer bool, readBufferSize, writeBufferSize int) *Conn {
@@ -773,13 +748,7 @@ func (c *Conn) advanceFrame() (int, error) {
 		if len(payload) >= 2 {
 			echoMessage = payload[:2]
 			closeCode = int(binary.BigEndian.Uint16(payload))
-			if !isValidReceivedCloseCode(closeCode) {
-				return noFrame, c.handleProtocolError("invalid close code")
-			}
 			closeText = string(payload[2:])
-			if !utf8.ValidString(closeText) {
-				return noFrame, c.handleProtocolError("invalid utf8 payload in close frame")
-			}
 		}
 		c.WriteControl(CloseMessage, echoMessage, time.Now().Add(writeWait))
 		return noFrame, &CloseError{Code: closeCode, Text: closeText}
@@ -853,9 +822,6 @@ func (r messageReader) Read(b []byte) (int, error) {
 				r.c.readMaskPos = maskBytes(r.c.readMaskKey, r.c.readMaskPos, b[:n])
 			}
 			r.c.readRemaining -= int64(n)
-			if r.c.readRemaining > 0 && r.c.readErr == io.EOF {
-				r.c.readErr = errUnexpectedEOF
-			}
 			return n, r.c.readErr
 		}
 
@@ -947,4 +913,19 @@ func FormatCloseMessage(closeCode int, text string) []byte {
 	binary.BigEndian.PutUint16(buf, uint16(closeCode))
 	copy(buf[2:], text)
 	return buf
+}
+
+// SetHeaders sets request headers
+func (c *Conn) SetHeaders(h *fasthttp.RequestHeader) {
+	c.headers = h
+}
+
+// Header returns header by key
+func (c *Conn) Header(key string) (value string) {
+	return string(c.headers.Peek(key))
+}
+
+// Headers returns the RequestHeader struct
+func (c *Conn) Headers() *fasthttp.RequestHeader {
+	return c.headers
 }
