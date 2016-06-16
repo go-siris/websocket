@@ -98,6 +98,9 @@ type Upgrader struct {
 
 	//Receiver it's the receiver handler, acceps a *websocket.Conn
 	Receiver func(*Conn)
+
+	// Headers  if true then the client's headers are copy to the websocket connection
+	Headers bool
 }
 
 // DontCheckOrigin set Upgrader.CheckOrigin to a function which always returns true
@@ -230,9 +233,7 @@ func (u *Upgrader) Upgrade(ctx context.IContext) error {
 	ctx.GetRequestCtx().Response.Header.Set("Sec-Websocket-Accept", computeAcceptKey(challengeKey))
 
 	subprotocol := u.selectSubprotocol(ctx)
-	h := &fasthttp.RequestHeader{}
-	//copy request headers in order to have access inside the Conn after
-	ctx.GetRequestCtx().Request.Header.CopyTo(h)
+
 	/*
 
 		var (
@@ -302,9 +303,16 @@ func (u *Upgrader) Upgrade(ctx context.IContext) error {
 		   		netConn.SetWriteDeadline(time.Time{})
 		   	}
 	*/
+	h := &fasthttp.RequestHeader{}
+	if u.Headers {
+		//copy request headers in order to have access inside the Conn after
+		ctx.GetRequestCtx().Request.Header.CopyTo(h)
+	}
 	ctx.GetRequestCtx().Hijack(func(conn net.Conn) {
 		c := newConn(conn, true, u.ReadBufferSize, u.WriteBufferSize)
-		c.SetHeaders(h)
+		if u.Headers {
+			c.SetHeaders(h)
+		}
 		c.subprotocol = subprotocol
 		u.Receiver(c)
 
@@ -349,8 +357,8 @@ func Upgrade(ctx context.IContext, receiverHandler func(*Conn), readBufSize, wri
 // first parameter is the receiver, think it like a handler which accepts a *websocket.Conn (func *websocket.Conn)
 // second parameter is the readBufSize (int)
 // third parameter is the writeBufSize (int)
-func Custom(receiverHandler func(*Conn), readBufSize, writeBufSize int) Upgrader {
-	u := Upgrader{ReadBufferSize: readBufSize, WriteBufferSize: writeBufSize, Receiver: receiverHandler}
+func Custom(receiverHandler func(*Conn), readBufSize, writeBufSize int, copyheaders bool) Upgrader {
+	u := Upgrader{ReadBufferSize: readBufSize, WriteBufferSize: writeBufSize, Receiver: receiverHandler, Headers: copyheaders}
 	u.Error = func(ctx context.IContext, status int, reason error) {
 		// don't return errors to maintain backwards compatibility
 	}
@@ -365,7 +373,7 @@ func Custom(receiverHandler func(*Conn), readBufSize, writeBufSize int) Upgrader
 // accepts one parameter
 // the receiver, think it like a handler which accepts a *websocket.Conn (func *websocket.Conn)
 func New(receiverHandler func(*Conn)) Upgrader {
-	return Custom(receiverHandler, 4096, 4096)
+	return Custom(receiverHandler, 4096, 4096, true)
 }
 
 // Subprotocols returns the subprotocols requested by the client in the

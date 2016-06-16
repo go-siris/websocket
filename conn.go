@@ -289,20 +289,23 @@ func (c *Conn) write(frameType int, deadline time.Time, bufs ...[]byte) error {
 	} else if frameType == CloseMessage {
 		c.closeSent = true
 	}
-
-	c.conn.SetWriteDeadline(deadline)
-	for _, buf := range bufs {
-		if len(buf) > 0 {
-			n, err := c.conn.Write(buf)
-			if n != len(buf) {
-				// Close on partial write.
-				c.conn.Close()
-			}
-			if err != nil {
-				return err
+	// maybe: https://github.com/kataras/iris/issues/175
+	if c != nil && c.conn != nil {
+		c.conn.SetWriteDeadline(deadline)
+		for _, buf := range bufs {
+			if len(buf) > 0 {
+				n, err := c.conn.Write(buf)
+				if n != len(buf) {
+					// Close on partial write.
+					c.conn.Close()
+				}
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
