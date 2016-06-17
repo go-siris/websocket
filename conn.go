@@ -282,26 +282,28 @@ func (c *Conn) RemoteAddr() net.Addr {
 
 func (c *Conn) write(frameType int, deadline time.Time, bufs ...[]byte) error {
 	<-c.mu
-	defer func() { c.mu <- true }()
+	defer func() {
+		c.mu <- true
+	}()
 
 	if c.closeSent {
 		return ErrCloseSent
 	} else if frameType == CloseMessage {
 		c.closeSent = true
 	}
-	// maybe: https://github.com/kataras/iris/issues/175
-	if c != nil && c.conn != nil {
-		c.conn.SetWriteDeadline(deadline)
-		for _, buf := range bufs {
-			if len(buf) > 0 {
-				n, err := c.conn.Write(buf)
-				if n != len(buf) {
-					// Close on partial write.
-					c.conn.Close()
-				}
-				if err != nil {
-					return err
-				}
+
+	if err := c.conn.SetWriteDeadline(deadline); err != nil {
+		return err
+	}
+	for _, buf := range bufs {
+		if len(buf) > 0 {
+			n, err := c.conn.Write(buf)
+			if n != len(buf) {
+				// Close on partial write.
+				c.conn.Close()
+			}
+			if err != nil {
+				return err
 			}
 		}
 	}
