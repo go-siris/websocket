@@ -1,6 +1,6 @@
 # Package information
 
-The iris-conrib/websocket package has been converted from the [gorilla/websocket](https://github.com/gorilla/websocket)
+The iris-conrib/websocket package has been converted from the [gorilla/websocket](https://github.com/gorilla/websocket) (in order to make it work with Iris).
 
 
 If you need more, use the high [high level iris-ws](https://github.com/kataras/iris/tree/master/websocket), I recommend you use that instead.
