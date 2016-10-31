@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kataras/go-websocket"
 	"github.com/valyala/fasthttp"
+	"gopkg.in/kataras/go-websocket.v0"
 )
 
 //taken from net/http
