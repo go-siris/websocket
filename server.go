@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kataras/go-websocket"
+	"gopkg.in/kataras/go-websocket.v0"
 	"github.com/valyala/fasthttp"
 )
 
